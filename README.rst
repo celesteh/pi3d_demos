@@ -60,3 +60,10 @@ then, say, in /home/pi/MyWork/python/roller/rollercoaster.py::
     myshader1 = pi3d.Shader("uv_flat") # generic from pi3d package
     mypost = pi3d.PostProcess("roller_shaders/rollshader1")
     ...
+
+
+This contains a drone image, "MQ-9 Reaper" by mofx
+Released under
+Creative Commons Attribution 3.0
+Downloaded from http://www.blendswap.com/blends/view/18368
+
