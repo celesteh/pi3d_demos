@@ -38,6 +38,11 @@ print("""===================================
 SHADER = pi3d.Shader("uv_bump") #for objects to look 3D
 FLATSH = pi3d.Shader("uv_flat") #for 'unlit' objects like the background
 
+flatwhite = pi3d.Texture("textures/white.png")
+xoffset = -13.799986457824705
+yoffset = -189.01106018066403
+zoffset = -22.439974822998053
+
 GRAVITY = 9.8 #m/s**2
 LD = 10 #lift/drag ratio
 DAMPING = 0.95 #reduce roll and pitch rate each update_variables
@@ -89,6 +94,11 @@ class Aeroplane(object):
     #create the actual model
     self.model = pi3d.Model(file_string=model, camera=CAMERA)
     self.model.set_shader(SHADER)
+    self.model.set_normal_shine(flatwhite, 16.0, flatwhite, 0.5)
+    #roration by Les
+    self.model.rotateToX(xoffset)
+    self.model.rotateToY(yoffset)
+    self.model.rotateToZ(zoffset)
     #create the bullets
     plane = pi3d.Plane(h=25, w=1)
     self.bullets = pi3d.MergeShape(camera=CAMERA)
@@ -241,9 +251,10 @@ class Aeroplane(object):
     absroll = math.degrees(math.asin(sin_r * cos_d + cos_r * sin_p * sin_d))
     abspitch = math.degrees(math.asin(sin_r * sin_d - cos_r * sin_p * cos_d))
     self.model.position(self.x, self.y, self.z)
-    self.model.rotateToX(abspitch)
-    self.model.rotateToY(self.direction)
-    self.model.rotateToZ(absroll)
+    # Les offsets
+    self.model.rotateToX(abspitch + xoffset)
+    self.model.rotateToY(self.direction + yoffset)
+    self.model.rotateToZ(absroll + zoffset)
     #set values for bullets
     if self.seq_b < self.num_b:
       self.bullets.position(self.x, self.y, self.z)
@@ -362,7 +373,7 @@ def json_load(ae, others):
         ae.rtime = 60
         for o in olist:
           if not(o[0] in others):
-            others[o[0]] = Aeroplane("models/biplane.obj", 0.1, o[0])
+            others[o[0]] = Aeroplane("models/Drome/drone.obj", 0.1, o[0])#Aeroplane("models/biplane.obj", 0.1, o[0])
           oa = others[o[0]] #oa is other aeroplane, ae is this one!
           oa.refif = o[0]
           #exponential smooth time offset values
@@ -416,7 +427,7 @@ except:
   except:
     refid = "00:00:00:00:00:00"
 #create the instances of Aeroplane
-a = Aeroplane("models/biplane.obj", 0.02, refid)
+a = Aeroplane("models/Drone/drone.obj", 0.02, refid)#Aeroplane("models/biplane.obj", 0.02, refid)
 a.z, a.direction = 900, 180
 #create instance of instruments
 inst = Instruments()
@@ -492,6 +503,21 @@ while DISPLAY.loop_running() and not inputs.key_state("KEY_ESC"):
     if a.nearest:
       tx, ty, tz = a.nearest.x, a.nearest.y, a.nearest.z
       a.nearest.other_damage += a.shoot([tx, ty, tz])
+
+  if inputs.key_state("KEY_A"):
+    xoffset += 0.23
+  elif inputs.key_state("KEY_S"):
+    xoffset -= 0.23
+  elif inputs.key_state("KEY_D"):
+    yoffset += 0.41
+  elif inputs.key_state("KEY_F"):
+    yoffset -= 0.41
+  elif inputs.key_state("KEY_G"):
+    zoffset += 0.12
+  elif inputs.key_state("KEY_H"):
+    zoffset -= 0.12
+  elif inputs.key_state("KEY_J"):
+    print(xoffset, yoffset, zoffset, '\n')
 
   a.update_variables()
   loc = a.update_position(mymap.calcHeight(a.x, a.z))
