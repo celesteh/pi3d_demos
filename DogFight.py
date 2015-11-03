@@ -252,9 +252,9 @@ class Aeroplane(object):
     abspitch = math.degrees(math.asin(sin_r * sin_d - cos_r * sin_p * cos_d))
     self.model.position(self.x, self.y, self.z)
     # Les offsets
-    self.model.rotateToX(abspitch + xoffset)
+    self.model.rotateToX((abspitch * 0.3)+ xoffset)
     self.model.rotateToY(self.direction + yoffset)
-    self.model.rotateToZ(absroll + zoffset)
+    self.model.rotateToZ((absroll * 0.5) + zoffset)
     #set values for bullets
     if self.seq_b < self.num_b:
       self.bullets.position(self.x, self.y, self.z)
