@@ -9,6 +9,7 @@ import time, math, glob, random, threading, json
 
 import demo
 import pi3d
+import pygame
 
 if sys.version_info[0] == 3:
   from urllib import request as urllib_request
@@ -130,6 +131,17 @@ class Aeroplane(object):
     elif self.power_setting > self.max_power:
       self.power_setting = self.max_power
 
+  #Les adds this for z thing on joystick
+  def stick_power(self, level): # level is -1 to + 1
+    level = level /-2
+    level = level + 0.5
+    self.power_setting = self.max_power * level
+    if self.power_setting < 0:
+      self.power_setting = 0
+    elif self.power_setting > self.max_power:
+      self.power_setting = self.max_power
+
+  
   def shoot(self, target):
     #only shoot if animation seq. ended
     if self.seq_b < self.num_b:
@@ -203,6 +215,8 @@ class Aeroplane(object):
       lift *= 0.9
       drag *= 1.3
 
+    #print('speed', self.v_speed)
+
     cos_pitch = math.cos(math.radians(self.pitch))
     sin_pitch = math.sin(math.radians(self.pitch))
     cos_roll = math.cos(math.radians(self.roll))
@@ -223,7 +237,7 @@ class Aeroplane(object):
     radius = self.mass * spsq / turn_force if turn_force != 0.0 else 0.0
     self.yaw = math.sqrt(spsq) / radius if radius != 0.0 else 0.0
 
-  def update_position(self, height):
+  def update_position(self, height, mapsize):
     #time
     tm = time.time()
     dt = tm - self.last_pos_time
@@ -251,10 +265,20 @@ class Aeroplane(object):
     absroll = math.degrees(math.asin(sin_r * cos_d + cos_r * sin_p * sin_d))
     abspitch = math.degrees(math.asin(sin_r * sin_d - cos_r * sin_p * cos_d))
     self.model.position(self.x, self.y, self.z)
+    #print ('postion', self.x, self.y, self.z)
     # Les offsets
     self.model.rotateToX((abspitch * 0.3)+ xoffset)
     self.model.rotateToY(self.direction + yoffset)
     self.model.rotateToZ((absroll * 0.5) + zoffset)
+
+    # Les map wrap
+    halfsize = mapsize/2
+    xm = (self.x + halfsize) % mapsize - halfsize # wrap location to stay on map -500 to +500
+    zm = (self.z + halfsize) % mapsize - halfsize
+
+    self.x = xm
+    self.z = zm
+    
     #set values for bullets
     if self.seq_b < self.num_b:
       self.bullets.position(self.x, self.y, self.z)
@@ -373,7 +397,7 @@ def json_load(ae, others):
         ae.rtime = 60
         for o in olist:
           if not(o[0] in others):
-            others[o[0]] = Aeroplane("models/Drome/drone.obj", 0.1, o[0])#Aeroplane("models/biplane.obj", 0.1, o[0])
+            others[o[0]] = Aeroplane("models/biplane.obj", 0.1, o[0])#Aeroplane("models/Drome/drone.obj", 0.1, o[0])#Aeroplane("models/biplane.obj", 0.1, o[0])
           oa = others[o[0]] #oa is other aeroplane, ae is this one!
           oa.refif = o[0]
           #exponential smooth time offset values
@@ -426,15 +450,17 @@ except:
     refid = (open("/sys/class/net/wlan0/address").read()).strip()
   except:
     refid = "00:00:00:00:00:00"
-#create the instances of Aeroplane
-a = Aeroplane("models/Drone/drone.obj", 0.02, refid)#Aeroplane("models/biplane.obj", 0.02, refid)
+#create the instances of Aeroplane - this is the one that draws
+    #switched to cube for testing
+a = Aeroplane("models/Drone/cube.obj", 0.02, refid)#Aeroplane("models/biplane.obj", 0.02, refid)
 a.z, a.direction = 900, 180
 #create instance of instruments
 inst = Instruments()
-others = {"start": 0.0} #contains a dictionary of other players keyed by refid
-thr = threading.Thread(target=json_load, args=(a, others))
-thr.daemon = True #allows the program to exit even if a Thread is still running
-thr.start()
+# won't be on network and don't need this
+#others = {"start": 0.0} #contains a dictionary of other players keyed by refid
+#thr = threading.Thread(target=json_load, args=(a, others))
+#thr.daemon = True #allows the program to exit even if a Thread is still running
+#thr.start()
 # Load textures for the environment cube
 ectex = pi3d.loadECfiles("textures/ecubes", "sbox")
 myecube = pi3d.EnvironmentCube(size=7000.0, maptype="FACES", camera=CAMERA)
@@ -452,16 +478,43 @@ mymap = pi3d.ElevationMap("textures/mountainsHgt.jpg", name="map",
                      divx=64, divy=64, camera=CAMERA)
 mymap.set_draw_details(SHADER, [mountimg1, bumpimg, reflimg], 1024.0, 0.0)
 mymap.set_fog((0.5, 0.5, 0.5, 1.0), 4000)
-# init events
+# init events keyboard/mouse
+"""
 inputs = pi3d.InputEvents()
 inputs.get_mouse_movement()
+"""
+#Les adds some joystick support
+#"""
+pygame.init()
+pygame.joystick.init()
+joystick = pygame.joystick.Joystick(0)
+joystick.init()
+print(joystick.get_name())
+#"""
+
+a.stick_power(-0.25)
+#a.set_power(1)
+
 CAMERA.position((0.0, 0.0, -10.0))
 cam_rot, cam_pitch = 0, 0
 cam_toggle = True #control mode
-while DISPLAY.loop_running() and not inputs.key_state("KEY_ESC"):
-  inputs.do_input_events()
-  #""" mouse input
+while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
+  """ mouse/keyboard input
+  #inputs.do_input_events()
   mx, my, mv, mh, md = inputs.get_mouse_movement()
+  # joystick
+  """
+  pygame.event.pump()
+  mx = joystick.get_axis(0)
+  my = joystick.get_axis(1)
+  mz = joystick.get_axis(2)
+
+  #mx, my, mz = inputs.get_joystick3d()
+  """
+  #a.stick_power(mz)
+  
+  #print(mx, my, mz)
+  # mouse input
   if cam_toggle:
     a.set_ailerons(-mx * 0.001)
     a.set_elevator(my * 0.001)
@@ -469,15 +522,16 @@ while DISPLAY.loop_running() and not inputs.key_state("KEY_ESC"):
     cam_rot -= mx * 0.1
     cam_pitch -= my * 0.1
   #"""
-  """ joystick input
-  mx, my = inputs.get_joystickR()
+  #""" joystick input
+  #mx, my = inputs.get_joystickR()
   if cam_toggle:
-    a.set_ailerons(-mx * 0.06)
-    a.set_elevator(my * 0.02)
+    a.set_ailerons(-mx * 0.01)#0.06)
+    a.set_elevator(my * 0.01)#0.02)
   else:
     cam_rot -= mx * 2.0
     cam_pitch -= my * 2.0
   """
+  
   if inputs.key_state("KEY_W") or inputs.get_hat()[1] == -1: #increase throttle
     a.set_power(1)
   if inputs.key_state("KEY_S") or inputs.get_hat()[1] == 1: #throttle back
@@ -518,35 +572,44 @@ while DISPLAY.loop_running() and not inputs.key_state("KEY_ESC"):
     zoffset -= 0.12
   elif inputs.key_state("KEY_J"):
     print(xoffset, yoffset, zoffset, '\n')
+  """
 
   a.update_variables()
-  loc = a.update_position(mymap.calcHeight(a.x, a.z))
+  loc = a.update_position(mymap.calcHeight(a.x, a.z), mapwidth * 0.77)
   CAMERA.reset()
   #CAMERA.rotate(-20 + cam_pitch, -loc[3] + cam_rot, 0) #unreal view
   CAMERA.rotate(-20 + cam_pitch, -loc[3] + cam_rot, -a.roll) #air-sick view
   CAMERA.position((loc[0], loc[1], loc[2]))
-  inst.draw()
-  a.draw()
 
-  for i in others:
-    if i == "start":
-      continue
-    b = others[i]
-    b.update_variables()
-    b.update_position(mymap.calcHeight(b.x, b.z))
-    b.draw()
-  #do httprequest if thread not already started and enough time has elapsed
-  if not (thr.isAlive()) and (a.last_pos_time > (others["start"] + a.rtime)):
-    thr = threading.Thread(target=json_load, args=(a, others))
-    thr.daemon = True #allows the program to exit even if a Thread is still running
-    thr.start()
-    
-  if a.last_pos_time > (inst.update_time + NR_TM):
-    inst.update(a, others)
+  #moved draw
 
   mymap.draw()
   myecube.position(loc[0], loc[1], loc[2])
   myecube.draw()
 
-inputs.release()
+
+  
+  inst.draw()
+  a.draw()
+
+  # no others
+  #for i in others:
+  #  if i == "start":
+  #    continue
+  #  b = others[i]
+  #  b.update_variables()
+  #  b.update_position(mymap.calcHeight(b.x, b.z))
+  #  b.draw()
+  #do httprequest if thread not already started and enough time has elapsed
+  #if not (thr.isAlive()) and (a.last_pos_time > (others["start"] + a.rtime)):
+  #  thr = threading.Thread(target=json_load, args=(a, others))
+  #  thr.daemon = True #allows the program to exit even if a Thread is still running
+  #  thr.start()
+    
+  #if a.last_pos_time > (inst.update_time + NR_TM):
+  #  inst.update(a, others)
+
+  #was draw
+
+#inputs.release()
 DISPLAY.destroy()
