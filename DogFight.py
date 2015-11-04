@@ -272,7 +272,8 @@ class Aeroplane(object):
     self.model.rotateToZ((absroll * 0.5) + zoffset)
 
     # Les map wrap
-    halfsize = mapsize/2
+    mapsize *= 0.7
+    halfsize = (mapsize/2)
     xm = (self.x + halfsize) % mapsize - halfsize # wrap location to stay on map -500 to +500
     zm = (self.z + halfsize) % mapsize - halfsize
 
@@ -303,53 +304,54 @@ class Instruments(object):
     ht = DISPLAY.height
     asi_tex = pi3d.Texture("textures/airspeed_indicator.png")
     alt_tex = pi3d.Texture("textures/altimeter.png")
-    rad_tex = pi3d.Texture("textures/radar.png")
-    dot_tex = pi3d.Texture("textures/radar_dot.png")
+    #rad_tex = pi3d.Texture("textures/radar.png")
+    #dot_tex = pi3d.Texture("textures/radar_dot.png")
     ndl_tex = pi3d.Texture("textures/instrument_needle.png")
     self.asi = pi3d.ImageSprite(asi_tex, FLATSH, camera=CAMERA2D,
           w=128, h=128, x=-128, y=-ht/2+64, z=2)
     self.alt = pi3d.ImageSprite(alt_tex, FLATSH, camera=CAMERA2D,
           w=128, h=128, x=0, y=-ht/2+64, z=2)
-    self.rad = pi3d.ImageSprite(rad_tex, FLATSH, camera=CAMERA2D,
-          w=128, h=128, x=128, y=-ht/2+64, z=2)
-    self.dot = pi3d.ImageSprite(dot_tex, FLATSH, camera=CAMERA2D,
-          w=16, h=16, z=1)
+    #self.rad = pi3d.ImageSprite(rad_tex, FLATSH, camera=CAMERA2D,
+    #      w=128, h=128, x=128, y=-ht/2+64, z=2)
+    #self.dot = pi3d.ImageSprite(dot_tex, FLATSH, camera=CAMERA2D,
+    #      w=16, h=16, z=1)
     self.ndl1 = pi3d.ImageSprite(ndl_tex, FLATSH, camera=CAMERA2D,
           w=128, h=128, x=-128, y=-ht/2+64, z=1)
     self.ndl2 = pi3d.ImageSprite(ndl_tex, FLATSH, camera=CAMERA2D,
           w=128, h=128, x=0, y=-ht/2+64, z=1)
-    self.ndl3 = pi3d.ImageSprite(ndl_tex, FLATSH, camera=CAMERA2D,
-          w=128, h=128, x=128, y=-ht/2+64, z=1)
-    self.dot_list = []
+    #self.ndl3 = pi3d.ImageSprite(ndl_tex, FLATSH, camera=CAMERA2D,
+    #      w=128, h=128, x=128, y=-ht/2+64, z=1)
+    #self.dot_list = []
     self.update_time = 0.0
     
   def draw(self):
     self.asi.draw()
     self.alt.draw()
-    self.rad.draw()
-    for i in self.dot_list:
-      self.dot.position(i[1] + 128, i[2] + self.rad.y(), 1)
-      self.dot.draw()
+    #self.rad.draw()
+    #for i in self.dot_list:
+    #  self.dot.position(i[1] + 128, i[2] + self.rad.y(), 1)
+    #  self.dot.draw()
     self.ndl1.draw()
     self.ndl2.draw()
-    self.ndl3.draw()
+    #self.ndl3.draw()
     
-  def update(self, ae, others):
+  def update(self, ae): #, others
     self.ndl1.rotateToZ(-360*ae.h_speed/140)
+    #print(-360*ae.h_speed/140)
     self.ndl2.rotateToZ(-360*ae.y/3000)
-    self.ndl3.rotateToZ(-ae.direction)
-    self.dot_list = []
-    for i in others:
-      if i == "start":
-        continue
-      o = others[i]
-      dx = (o.x - ae.x) / 50
-      dy = (o.z - ae.z) / 50
-      d = math.hypot(dx, dy)
-      if d > 40:
-        dx *= 40 / d
-        dy *= 40 / d
-      self.dot_list.append([o.refid, dx, dy])
+    #self.ndl3.rotateToZ(-ae.direction)
+    #self.dot_list = []
+    #for i in others:
+    #  if i == "start":
+    #    continue
+    #  o = others[i]
+    #  dx = (o.x - ae.x) / 50
+    #  dy = (o.z - ae.z) / 50
+    #  d = math.hypot(dx, dy)
+    #  if d > 40:
+    #    dx *= 40 / d
+    #    dy *= 40 / d
+    #  self.dot_list.append([o.refid, dx, dy])
     self.update_time = ae.last_pos_time
 
 def json_load(ae, others):
@@ -465,7 +467,7 @@ inst = Instruments()
 ectex = pi3d.loadECfiles("textures/ecubes", "sbox")
 myecube = pi3d.EnvironmentCube(size=7000.0, maptype="FACES", camera=CAMERA)
 myecube.set_draw_details(FLATSH, ectex)
-myecube.set_fog((0.5,0.5,0.5,1.0), 4000)
+myecube.set_fog((0.5,0.5,0.5,1.0), 3000) #was 4000
 # Create elevation map
 mapwidth = 10000.0
 mapdepth = 10000.0
@@ -575,7 +577,7 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
   """
 
   a.update_variables()
-  loc = a.update_position(mymap.calcHeight(a.x, a.z), mapwidth * 0.77)
+  loc = a.update_position(mymap.calcHeight(a.x, a.z), mapwidth)
   CAMERA.reset()
   #CAMERA.rotate(-20 + cam_pitch, -loc[3] + cam_rot, 0) #unreal view
   CAMERA.rotate(-20 + cam_pitch, -loc[3] + cam_rot, -a.roll) #air-sick view
@@ -606,8 +608,8 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
   #  thr.daemon = True #allows the program to exit even if a Thread is still running
   #  thr.start()
     
-  #if a.last_pos_time > (inst.update_time + NR_TM):
-  #  inst.update(a, others)
+  if a.last_pos_time > (inst.update_time + NR_TM):
+    inst.update(a)
 
   #was draw
 
