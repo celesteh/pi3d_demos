@@ -40,9 +40,9 @@ SHADER = pi3d.Shader("uv_bump") #for objects to look 3D
 FLATSH = pi3d.Shader("uv_flat") #for 'unlit' objects like the background
 
 flatwhite = pi3d.Texture("textures/white.png")
-xoffset = -13.799986457824705
-yoffset = -189.01106018066403
-zoffset = -22.439974822998053
+xoffset = 0#-13.799986457824705
+yoffset = 0#-189.01106018066403
+zoffset = 0#-22.439974822998053
 
 GRAVITY = 9.8 #m/s**2
 LD = 10 #lift/drag ratio
@@ -264,7 +264,6 @@ class Aeroplane(object):
     cos_p = math.cos(math.radians(self.pitch))
     absroll = math.degrees(math.asin(sin_r * cos_d + cos_r * sin_p * sin_d))
     abspitch = math.degrees(math.asin(sin_r * sin_d - cos_r * sin_p * cos_d))
-    self.model.position(self.x, self.y, self.z)
     #print ('postion', self.x, self.y, self.z)
     # Les offsets
     self.model.rotateToX((abspitch * 0.3)+ xoffset)
@@ -277,8 +276,14 @@ class Aeroplane(object):
     xm = (self.x + halfsize) % mapsize - halfsize # wrap location to stay on map -500 to +500
     zm = (self.z + halfsize) % mapsize - halfsize
 
+    #if ((xm != self.x) or (zm != self.z)):
+    #  print(xm, zm)
+
     self.x = xm
     self.z = zm
+
+    self.model.position(self.x, self.y, self.z)
+
     
     #set values for bullets
     if self.seq_b < self.num_b:
@@ -454,7 +459,7 @@ except:
     refid = "00:00:00:00:00:00"
 #create the instances of Aeroplane - this is the one that draws
     #switched to cube for testing
-a = Aeroplane("models/Drone/cube.obj", 0.02, refid)#Aeroplane("models/biplane.obj", 0.02, refid)
+a = Aeroplane("models/Drone/drone.obj", 0.02, refid)#Aeroplane("models/biplane.obj", 0.02, refid)
 a.z, a.direction = 900, 180
 #create instance of instruments
 inst = Instruments()
