@@ -216,6 +216,14 @@ class Aeroplane(object):
       drag *= 1.3
 
     #print('speed', self.v_speed)
+    #Les hack
+    if (self.h_speed ==0):
+      lift = 0
+      v_force = self.mass * GRAVITY *-1
+      v_acc = GRAVITY * -1 #v_force / self.mass
+      self.y -= GRAVITY #bad hack
+    #
+
 
     cos_pitch = math.cos(math.radians(self.pitch))
     sin_pitch = math.sin(math.radians(self.pitch))
@@ -472,7 +480,7 @@ inst = Instruments()
 ectex = pi3d.loadECfiles("textures/ecubes", "sbox")
 myecube = pi3d.EnvironmentCube(size=7000.0, maptype="FACES", camera=CAMERA)
 myecube.set_draw_details(FLATSH, ectex)
-myecube.set_fog((0.5,0.5,0.5,1.0), 3000) #was 4000
+myecube.set_fog((0.5,0.5,0.5,1.0), 3500) #was 4000
 # Create elevation map
 mapwidth = 10000.0
 mapdepth = 10000.0
@@ -485,6 +493,34 @@ mymap = pi3d.ElevationMap("textures/mountainsHgt.jpg", name="map",
                      divx=64, divy=64, camera=CAMERA)
 mymap.set_draw_details(SHADER, [mountimg1, bumpimg, reflimg], 1024.0, 0.0)
 mymap.set_fog((0.5, 0.5, 0.5, 1.0), 4000)
+"""# Les adds clouds
+cloudno = 20
+cloud_depth = 350.0
+
+cloudTex = []
+cloudTex.append(pi3d.Texture("textures/cloud2.png",True))
+cloudTex.append(pi3d.Texture("textures/cloud3.png",True))
+cloudTex.append(pi3d.Texture("textures/cloud4.png",True))
+cloudTex.append(pi3d.Texture("textures/cloud5.png",True))
+cloudTex.append(pi3d.Texture("textures/cloud6.png",True))
+
+# Setup cloud positions and cloud image refs
+cz = 0.0
+clouds = [] # an array for the clouds
+inc = 4100/cloudno
+for b in range (0, cloudno):
+  size = 0.5 + random.random()/2.0
+  cloud = pi3d.Sprite(w=inc, h=1000,
+          x=4100, y=10.0, z=inc*b)
+  cloud.set_draw_details(SHADER, [cloudTex[int(random.random() * 4.99999)]], 0.0, 0.0)
+  clouds.append(cloud)
+for b in range (0, cloudno):
+  size = 0.5 + random.random()/2.0
+  cloud = pi3d.Sprite(w=inc, h=1000,
+          x=inc*b, y=10.0, z=4100)
+  cloud.set_draw_details(SHADER, [cloudTex[int(random.random() * 4.99999)]], 0.0, 0.0)
+  clouds.append(cloud)
+"""
 # init events keyboard/mouse
 """
 inputs = pi3d.InputEvents()
@@ -594,6 +630,10 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
   myecube.position(loc[0], loc[1], loc[2])
   myecube.draw()
 
+  """
+  for cloud in clouds:
+    cloud.draw()
+  """
 
   
   inst.draw()
