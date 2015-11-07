@@ -10,6 +10,13 @@ import time, math, glob, random, threading, json
 import demo
 import pi3d
 import pygame
+import numpy as np
+from PIL import Image, ImageDraw
+import subprocess as sp
+import threading
+import time
+import math
+
 
 if sys.version_info[0] == 3:
   from urllib import request as urllib_request
@@ -18,6 +25,13 @@ else:
   import urllib
   urllib_request = urllib
   urllib_parse = urllib
+
+command = ['avconv' '-i' '%' '-f' 'raw' '-pix_fmts' 'rgb24' 'pipe:']
+
+arousal = 0
+ejaculation=0
+EXCITED_THRESH = 1000
+ORGASMIC_THRESH = 1500
 
 #display, camera, shader
 DISPLAY = pi3d.Display.create(x=100, y=100, frames_per_second=20)
