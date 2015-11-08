@@ -549,6 +549,23 @@ joystick.init()
 print(joystick.get_name())
 #"""
 
+#audio
+pygame.mixer.init()
+pygame.mixer.set_num_channels(1)
+sfx = pygame.mixer.Channel(0)
+
+sfxFiles = glob.glob("sfx/moan*.aiff")
+random.shuffle(sfxFiles)
+nSFX = len(sfxFiles)
+iSFX = 0
+#load the first moan
+moan=pygame.mixer.sound(sfxFiles[iSFX % nSFX])
+iSFX += 1
+
+orgasmSFX = pygame.mixer.Sound('sfx/orgasm.wav')
+
+
+
 a.stick_power(-0.25)
 #a.set_power(1)
 
@@ -565,6 +582,28 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
   mx = joystick.get_axis(0)
   my = joystick.get_axis(1)
   mz = joystick.get_axis(2)
+
+  # Do the arousal bits
+  if((mx == 0) and (my == 0)):
+    #nothing happening to the stick
+    arousal -= 1
+    if (arousal < 0) :
+      arousal = 0
+  else
+    #touching the stick
+    arousal += 1
+    print(arousal)
+
+  if(arousal >=ORGASMIC_THRESH)
+    sfx.queue(orgasmSFX)
+    # change video to orgasm
+  elif(arousal >= EXCITED_THRESH)
+    if not sfx.get_busy():
+      sfx.play(moan)
+      #get ready for the next one
+      moan=pygame.mixer.sound(sfxFiles[iSFX])
+      iSFX += 1
+      iSFX = iSFX % nSFX
 
   #mx, my, mz = inputs.get_joystick3d()
   """
