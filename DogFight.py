@@ -30,8 +30,11 @@ command = ['avconv' '-i' '%' '-f' 'raw' '-pix_fmts' 'rgb24' 'pipe:']
 
 arousal = 0
 ejaculation=0
-EXCITED_THRESH = 1000
-ORGASMIC_THRESH = 1500
+EXCITED_THRESH = 20
+ORGASMIC_THRESH = 1000
+NEAR = ORGASMIC_THRESH * 0.9
+REPOSE = -500
+PAUSE = 1
 
 #display, camera, shader
 DISPLAY = pi3d.Display.create(x=100, y=100, frames_per_second=20)
@@ -559,11 +562,12 @@ random.shuffle(sfxFiles)
 nSFX = len(sfxFiles)
 iSFX = 0
 #load the first moan
-moan=pygame.mixer.sound(sfxFiles[iSFX % nSFX])
+moan=pygame.mixer.Sound(sfxFiles[iSFX % nSFX])
 iSFX += 1
 
 orgasmSFX = pygame.mixer.Sound('sfx/orgasm.wav')
 
+last_moan = 0
 
 
 a.stick_power(-0.25)
@@ -583,27 +587,39 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
   my = joystick.get_axis(1)
   mz = joystick.get_axis(2)
 
+  ejaculation = 0
+
   # Do the arousal bits
   if((mx == 0) and (my == 0)):
     #nothing happening to the stick
-    arousal -= 1
-    if (arousal < 0) :
-      arousal = 0
-  else
+    if (arousal < -10):
+      arousal += 1
+    else:
+      arousal -= 1
+      if (arousal < 0) :
+        arousal = 0
+  else :
     #touching the stick
     arousal += 1
-    print(arousal)
+    #print(arousal)
 
-  if(arousal >=ORGASMIC_THRESH)
-    sfx.queue(orgasmSFX)
-    # change video to orgasm
-  elif(arousal >= EXCITED_THRESH)
-    if not sfx.get_busy():
-      sfx.play(moan)
-      #get ready for the next one
-      moan=pygame.mixer.sound(sfxFiles[iSFX])
-      iSFX += 1
-      iSFX = iSFX % nSFX
+    if(arousal >=ORGASMIC_THRESH):
+      sfx.queue(orgasmSFX)
+      ejaculation = 1
+      arousal = REPOSE
+      # change video to orgasm
+    elif(arousal >= EXCITED_THRESH):
+      #print ('hott!')
+      pause = (ORGASMIC_THRESH - arousal)/280 + PAUSE
+      print (pause)
+      if (not sfx.get_busy()) and (time.time() - last_moan > pause):
+        #print (arousal, 'moan')
+        sfx.play(moan)
+        #get ready for the next one
+        moan=pygame.mixer.Sound(sfxFiles[iSFX])
+        iSFX += 1
+        iSFX = iSFX % nSFX
+        last_moan = time.time()
 
   #mx, my, mz = inputs.get_joystick3d()
   """
