@@ -26,7 +26,50 @@ else:
   urllib_request = urllib
   urllib_parse = urllib
 
-command = ['avconv' '-i' '%' '-f' 'raw' '-pix_fmts' 'rgb24' 'pipe:']
+W, H, P = 640, 360, 3 # video width, height, bytes per pixel (3 = RGB)
+
+#command = ['/usr/local/bin/ffmpeg', ' -i /home/pi/Documents/code/pi3d_demos/films/low.mp4 -f image2pipe -pix_fmt rgb24 -vcodec rawvideo -']
+command = [ 'ffmpeg', '-i', '/home/pi/Documents/code/pi3d_demos/films/low.mp4', '-f', 'image2pipe',
+                      '-pix_fmt', 'rgb24', '-vcodec', 'rawvideo', '-']
+# 640 x 360
+
+flag = False # use to signal new texture
+image = np.zeros((H, W, P), dtype='uint8')
+
+def pipe_thread():
+  global flag, image, tex
+  pipe = None
+  while True:
+    st_tm = time.time()
+    #print('ready to open pipe')
+    if pipe is None:
+      pipe = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE, bufsize=-1)
+    #print('pipe open')
+    prev = image
+    image =  np.fromstring(pipe.stdout.read(H * W * P), dtype='uint8')
+    #print('got image')
+    pipe.stdout.flush() # presumably nothing else has arrived since read()
+    pipe.stderr.flush() # ffmpeg sends commentary to stderr
+    if len(image) < H * W * P: # end of video, reload
+      image = prev
+      pipe.terminate()
+      pipe = None
+    else:
+      image.shape = (H, W, P)
+      flag = True
+      tex = pi3d.Texture(image) #if this is here, we can avoid race conditions
+    #print('we get here')
+    step = time.time() - st_tm
+    time.sleep(max((1/15) - step, 0.0)) # adding fps info to ffmpeg doesn't seem to have any effect
+
+
+t = threading.Thread(target=pipe_thread)
+t.daemon = True
+t.start()
+
+while flag is False:
+  time.sleep(1.0)
+
 
 arousal = 0
 ejaculation=0
@@ -352,9 +395,14 @@ class Instruments(object):
     #self.ndl3 = pi3d.ImageSprite(ndl_tex, FLATSH, camera=CAMERA2D,
     #      w=128, h=128, x=128, y=-ht/2+64, z=1)
     #self.dot_list = []
+    
+    #tex = pi3d.Texture(image) not in this thread
+    self.vid = pi3d.ImageSprite(tex, FLATSH, camera=CAMERA2D,
+          w=W*0.7, h=H*0.7, x=128+(W/2), y=(-ht/2)+(H/2), z=2)
     self.update_time = 0.0
     
   def draw(self):
+    global flag
     self.asi.draw()
     self.alt.draw()
     #self.rad.draw()
@@ -364,8 +412,13 @@ class Instruments(object):
     self.ndl1.draw()
     self.ndl2.draw()
     #self.ndl3.draw()
+    # put it in the video reading thread instead or there will be trouble
+    #tex = pi3d.Texture(image) # can pass numpy array or PIL.Image rather than path as string
+    self.vid.draw()
+
     
   def update(self, ae): #, others
+    global flag
     self.ndl1.rotateToZ(-360*ae.h_speed/140)
     #print(-360*ae.h_speed/140)
     self.ndl2.rotateToZ(-360*ae.y/3000)
@@ -382,6 +435,11 @@ class Instruments(object):
     #    dx *= 40 / d
     #    dy *= 40 / d
     #  self.dot_list.append([o.refid, dx, dy])
+    if flag:
+      tex.update_ndarray(image)
+      flag = False
+      self.vid.set_textures([tex])
+
     self.update_time = ae.last_pos_time
 
 def json_load(ae, others):
@@ -510,7 +568,7 @@ mymap = pi3d.ElevationMap("textures/mountainsHgt.jpg", name="map",
                      divx=64, divy=64, camera=CAMERA)
 mymap.set_draw_details(SHADER, [mountimg1, bumpimg, reflimg], 1024.0, 0.0)
 mymap.set_fog((0.5, 0.5, 0.5, 1.0), 4000)
-"""# Les adds clouds
+# Les adds clouds
 cloudno = 20
 cloud_depth = 350.0
 
@@ -521,6 +579,7 @@ cloudTex.append(pi3d.Texture("textures/cloud4.png",True))
 cloudTex.append(pi3d.Texture("textures/cloud5.png",True))
 cloudTex.append(pi3d.Texture("textures/cloud6.png",True))
 
+"""
 # Setup cloud positions and cloud image refs
 cz = 0.0
 clouds = [] # an array for the clouds
@@ -528,14 +587,16 @@ inc = 4100/cloudno
 for b in range (0, cloudno):
   size = 0.5 + random.random()/2.0
   cloud = pi3d.Sprite(w=inc, h=1000,
-          x=4100, y=10.0, z=inc*b)
+          x=4200, y=10.0, z=inc*b)
   cloud.set_draw_details(SHADER, [cloudTex[int(random.random() * 4.99999)]], 0.0, 0.0)
+  cloud.rotateIncY(90)
   clouds.append(cloud)
 for b in range (0, cloudno):
   size = 0.5 + random.random()/2.0
   cloud = pi3d.Sprite(w=inc, h=1000,
-          x=inc*b, y=10.0, z=4100)
+          x=inc*b, y=100.0, z=4200)
   cloud.set_draw_details(SHADER, [cloudTex[int(random.random() * 4.99999)]], 0.0, 0.0)
+  cloud.rotateIncY(90)
   clouds.append(cloud)
 """
 # init events keyboard/mouse
@@ -611,7 +672,7 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
     elif(arousal >= EXCITED_THRESH):
       #print ('hott!')
       pause = (ORGASMIC_THRESH - arousal)/280 + PAUSE
-      print (pause)
+      #print (pause)
       if (not sfx.get_busy()) and (time.time() - last_moan > pause):
         #print (arousal, 'moan')
         sfx.play(moan)
@@ -689,8 +750,8 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
   a.update_variables()
   loc = a.update_position(mymap.calcHeight(a.x, a.z), mapwidth)
   CAMERA.reset()
-  #CAMERA.rotate(-20 + cam_pitch, -loc[3] + cam_rot, 0) #unreal view
-  CAMERA.rotate(-20 + cam_pitch, -loc[3] + cam_rot, -a.roll) #air-sick view
+  CAMERA.rotate(-20 + cam_pitch, -loc[3] + cam_rot, 0) #unreal view
+  #CAMERA.rotate(-20 + cam_pitch, -loc[3] + cam_rot, -a.roll) #air-sick view
   CAMERA.position((loc[0], loc[1], loc[2]))
 
   #moved draw
@@ -701,6 +762,8 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
 
   """
   for cloud in clouds:
+    cloud.positionY(a.y)
+    #print (cloud.y, a.y)
     cloud.draw()
   """
 
