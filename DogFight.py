@@ -16,6 +16,7 @@ import subprocess as sp
 import threading
 import time
 import math
+import random
 
 
 if sys.version_info[0] == 3:
@@ -29,45 +30,81 @@ else:
 W, H, P = 640, 360, 3 # video width, height, bytes per pixel (3 = RGB)
 
 #command = ['/usr/local/bin/ffmpeg', ' -i /home/pi/Documents/code/pi3d_demos/films/low.mp4 -f image2pipe -pix_fmt rgb24 -vcodec rawvideo -']
-command = [ 'ffmpeg', '-i', '/home/pi/Documents/code/pi3d_demos/films/low.mp4', '-f', 'image2pipe',
-                      '-pix_fmt', 'rgb24', '-vcodec', 'rawvideo', '-']
+
 # 640 x 360
 
 flag = False # use to signal new texture
-image = np.zeros((H, W, P), dtype='uint8')
-
-def pipe_thread():
-  global flag, image, tex
-  pipe = None
-  while True:
-    st_tm = time.time()
-    #print('ready to open pipe')
-    if pipe is None:
-      pipe = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE, bufsize=-1)
-    #print('pipe open')
-    prev = image
-    image =  np.fromstring(pipe.stdout.read(H * W * P), dtype='uint8')
-    #print('got image')
-    pipe.stdout.flush() # presumably nothing else has arrived since read()
-    pipe.stderr.flush() # ffmpeg sends commentary to stderr
-    if len(image) < H * W * P: # end of video, reload
-      image = prev
-      pipe.terminate()
-      pipe = None
-    else:
-      image.shape = (H, W, P)
-      flag = True
-      tex = pi3d.Texture(image) #if this is here, we can avoid race conditions
-    #print('we get here')
-    step = time.time() - st_tm
-    time.sleep(max((1/15) - step, 0.0)) # adding fps info to ffmpeg doesn't seem to have any effect
 
 
-t = threading.Thread(target=pipe_thread)
-t.daemon = True
-t.start()
+class VidPlayer(object):
+  def __init__(self):
+    self.mood_index = -1
+    self.mid_climax = False
+    self.mood = ['/home/pi/Documents/code/pi3d_demos/films/transition.mp4', '/home/pi/Documents/code/pi3d_demos/films/low.mp4', '/home/pi/Documents/code/pi3d_demos/films/high.mp4']
+    self.set_mood(0)
+    self.image = np.zeros((H, W, P), dtype='uint8')
+    self.flag = False
+    t = threading.Thread(target=self.pipe_thread)
+    t.daemon = True
+    t.start()
 
-while flag is False:
+  def set_mood(self, mood_index, limit=30):
+    if (mood_index != self.mood_index) and (not self.mid_climax):
+      self.command = [ 'ffmpeg', '-ss', str(random.random() * limit), '-i', self.mood[mood_index], '-f', 'image2pipe', '-pix_fmt', 'rgb24', '-vcodec', 'rawvideo', '-']
+      self.command_flag = True
+      self.mood_index = mood_index
+
+  def ready(self):
+    return(self.flag)
+
+  def climax(self):
+    self.set_mood(2, 0)
+    self.mid_climax = True
+    
+  def pipe_thread(self):
+    #global flag, image, tex
+    pipe = None
+    while True:
+      st_tm = time.time()
+      #print('ready to open pipe')
+      if (pipe is None) or (self.command_flag):
+        if (pipe is not None):
+          pipe.kill()
+        pipe = sp.Popen(self.command, stdout=sp.PIPE, stderr=sp.PIPE, bufsize=-1)
+        self.command_flag = False
+      #print('pipe open')
+      prev = self.image
+      self.image =  np.fromstring(pipe.stdout.read(H * W * P), dtype='uint8')
+      #print('got image')
+      pipe.stdout.flush() # presumably nothing else has arrived since read()
+      pipe.stderr.flush() # ffmpeg sends commentary to stderr
+      if len(self.image) < H * W * P: # end of video, reload
+        self.image = prev
+        pipe.terminate()
+        pipe = None
+        self.mid_climax = False
+      else:
+        self.image.shape = (H, W, P)
+        self.flag = True
+        self.tex = pi3d.Texture(self.image) #if this is here, we can avoid race conditions
+      #print('we get here')
+      step = time.time() - st_tm
+      time.sleep(max((1/15) - step, 0.0)) # adding fps info to ffmpeg doesn't seem to have any effect
+
+
+  def get_image(self):
+    if self.flag:
+      self.flag = False
+      return(self.image)
+
+  def get_tex(self):
+    if self.flag:
+      self.flag = False
+      self.tex.update_ndarray(self.image)
+      return(self.tex)
+
+vplayer =VidPlayer()
+while vplayer.ready() is False:
   time.sleep(1.0)
 
 
@@ -397,8 +434,10 @@ class Instruments(object):
     #self.dot_list = []
     
     #tex = pi3d.Texture(image) not in this thread
-    self.vid = pi3d.ImageSprite(tex, FLATSH, camera=CAMERA2D,
-          w=W*0.7, h=H*0.7, x=128+(W/2), y=(-ht/2)+(H/2), z=2)
+    vidw = W * 0.7
+    vidh = H *0.7
+    self.vid = pi3d.ImageSprite(vplayer.get_tex(), FLATSH, camera=CAMERA2D,
+          w=vidw, h=vidh, x=((wd/2)-(vidw/2)), y=(-ht/2)+(vidh/2), z=2)
     self.update_time = 0.0
     
   def draw(self):
@@ -435,11 +474,13 @@ class Instruments(object):
     #    dx *= 40 / d
     #    dy *= 40 / d
     #  self.dot_list.append([o.refid, dx, dy])
+    #update rate too slow
+    """
     if flag:
       tex.update_ndarray(image)
       flag = False
       self.vid.set_textures([tex])
-
+    """
     self.update_time = ae.last_pos_time
 
 def json_load(ae, others):
@@ -656,6 +697,7 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
     if (arousal < -10):
       arousal += 1
     else:
+      vplayer.set_mood(0,1)
       arousal -= 1
       if (arousal < 0) :
         arousal = 0
@@ -669,8 +711,10 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
       ejaculation = 1
       arousal = REPOSE
       # change video to orgasm
+      vplayer.climax()
     elif(arousal >= EXCITED_THRESH):
       #print ('hott!')
+      vplayer.set_mood(1)
       pause = (ORGASMIC_THRESH - arousal)/280 + PAUSE
       #print (pause)
       if (not sfx.get_busy()) and (time.time() - last_moan > pause):
@@ -757,6 +801,22 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
   #moved draw
 
   mymap.draw()
+
+  limit = mapwidth / 2
+  
+  if abs(loc[0]) > limit:
+    mymap.position(math.copysign(limit,loc[0]), 0.0, 0.0)
+    mymap.draw()
+  if abs(loc[2]) > limit:
+    mymap.position(0.0, 0.0, math.copysign(limit,loc[2]))
+    mymap.draw()
+  
+    #if abs(loc[1]) > 300:
+    #  mymap.position(math.copysign(1000,loc[0]), 0.0, math.copysign(1000,loc[2]))
+    #  mymap.draw()
+  mymap.position(0.0, 0.0, 0.0)
+
+  #mymap.draw()
   myecube.position(loc[0], loc[1], loc[2])
   myecube.draw()
 
@@ -767,6 +827,13 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
     cloud.draw()
   """
 
+  #if flag:
+  #  tex.update_ndarray(image)
+  #  flag = False
+  #  inst.vid.set_textures([tex])
+  if vplayer.ready():
+    vtex = vplayer.get_tex()
+    inst.vid.set_textures([vtex])
   
   inst.draw()
   a.draw()
