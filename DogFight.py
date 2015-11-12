@@ -48,9 +48,9 @@ class VidPlayer(object):
     t.daemon = True
     t.start()
 
-  def set_mood(self, mood_index, limit=30):
+  def set_mood(self, mood_index, limit=90, start=0):
     if (mood_index != self.mood_index) and (not self.mid_climax):
-      self.command = [ 'ffmpeg', '-ss', str(random.random() * limit), '-i', self.mood[mood_index], '-f', 'image2pipe', '-pix_fmt', 'rgb24', '-vcodec', 'rawvideo', '-']
+      self.command = [ 'ffmpeg', '-ss', str(start + (random.random() * limit)), '-i', self.mood[mood_index], '-f', 'image2pipe', '-pix_fmt', 'rgb24', '-vcodec', 'rawvideo', '-']
       self.command_flag = True
       self.mood_index = mood_index
 
@@ -58,7 +58,7 @@ class VidPlayer(object):
     return(self.flag)
 
   def climax(self):
-    self.set_mood(2, 0)
+    self.set_mood(2, 0, 37)
     self.mid_climax = True
     
   def pipe_thread(self):
@@ -714,8 +714,12 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
       vplayer.climax()
     elif(arousal >= EXCITED_THRESH):
       #print ('hott!')
-      vplayer.set_mood(1)
+      
       pause = (ORGASMIC_THRESH - arousal)/280 + PAUSE
+      if pause < 1.5:
+        vplayer.set_mood(2,5)
+      else:
+        vplayer.set_mood(1)
       #print (pause)
       if (not sfx.get_busy()) and (time.time() - last_moan > pause):
         #print (arousal, 'moan')
