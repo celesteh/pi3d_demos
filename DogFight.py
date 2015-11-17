@@ -41,7 +41,7 @@ class VidPlayer(object):
     self.mood_index = -1
     self.mid_climax = False
     self.mood = ['/home/pi/Documents/code/pi3d_demos/films/transition.mp4', '/home/pi/Documents/code/pi3d_demos/films/low.mp4', '/home/pi/Documents/code/pi3d_demos/films/high.mp4']
-    self.set_mood(0)
+    self.set_mood(0, 0)
     self.image = np.zeros((H, W, P), dtype='uint8')
     self.flag = False
     t = threading.Thread(target=self.pipe_thread)
