@@ -41,7 +41,7 @@ class VidPlayer(object):
     self.mood_index = -1
     self.mid_climax = False
     self.mood = ['/home/pi/Documents/code/pi3d_demos/films/transition.mp4', '/home/pi/Documents/code/pi3d_demos/films/low.mp4', '/home/pi/Documents/code/pi3d_demos/films/high.mp4']
-    self.set_mood(0, 0)
+    self.set_cmd(0, 0)
     self.image = np.zeros((H, W, P), dtype='uint8')
     self.flag = False
     t = threading.Thread(target=self.pipe_thread)
@@ -50,16 +50,23 @@ class VidPlayer(object):
 
   def set_mood(self, mood_index, limit=90, start=0):
     if (mood_index != self.mood_index) and (not self.mid_climax):
-      self.command = [ 'ffmpeg', '-ss', str(start + (random.random() * limit)), '-i', self.mood[mood_index], '-f', 'image2pipe', '-pix_fmt', 'rgb24', '-vcodec', 'rawvideo', '-']
-      self.command_flag = True
-      self.mood_index = mood_index
+      self.set_cmd(mood_index, limit, start)
+      #self.command = [ 'ffmpeg', '-ss', str(start + (random.random() * limit)), '-i', self.mood[mood_index], '-f', 'image2pipe', '-pix_fmt', 'rgb24', '-vcodec', 'rawvideo', '-']
+      #self.command_flag = True
+      #self.mood_index = mood_index
+
+  def set_cmd(self, mood_index, limit=90, start=0):
+    self.command = [ 'ffmpeg', '-ss', str(start + (random.random() * limit)), '-i', self.mood[mood_index], '-f', 'image2pipe', '-pix_fmt', 'rgb24', '-vcodec', 'rawvideo', '-']
+    self.command_flag = True
+    self.mood_index = mood_index
 
   def ready(self):
     return(self.flag)
 
   def climax(self):
-    self.set_mood(2, 0, 37)
-    self.mid_climax = True
+    if (not self.mid_climax):
+      self.set_cmd(2, 0, 42.5)
+      self.mid_climax = True
     
   def pipe_thread(self):
     #global flag, image, tex
@@ -82,7 +89,9 @@ class VidPlayer(object):
         self.image = prev
         pipe.terminate()
         pipe = None
-        self.mid_climax = False
+        if self.mid_climax:
+          self.mid_climax = False
+          self.set_cmd(0,0)
       else:
         self.image.shape = (H, W, P)
         self.flag = True
@@ -695,6 +704,8 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
   if((mx == 0) and (my == 0)):
     #nothing happening to the stick
     if (arousal < -10):
+      if (arousal < (REPOSE+12)):
+        a.shoot([0, 0, 0])
       arousal += 1
     else:
       vplayer.set_mood(0,1)
@@ -712,6 +723,7 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
       arousal = REPOSE
       # change video to orgasm
       vplayer.climax()
+      a.shoot([0, 0, 0])
     elif(arousal >= EXCITED_THRESH):
       #print ('hott!')
       
