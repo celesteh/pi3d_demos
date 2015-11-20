@@ -126,7 +126,8 @@ REPOSE = -500
 PAUSE = 1
 
 #display, camera, shader
-DISPLAY = pi3d.Display.create(x=100, y=100, frames_per_second=20)
+#DISPLAY = pi3d.Display.create(x=100, y=100, frames_per_second=20)
+DISPLAY = pi3d.Display.create(frames_per_second=20)
 #a default camera is created automatically but we might need a 2nd 2D camera
 #for displaying the instruments etc. Also, because the landscape is large
 #we need to set the far plane to 10,000
