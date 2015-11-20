@@ -682,6 +682,17 @@ orgasmSFX = pygame.mixer.Sound('sfx/orgasm.wav')
 last_moan = 0
 
 
+def touch ():
+    if not os.path.exists('/tmp/sexbot1'):
+        open('/tmp/sexbot1', 'a').close() 
+    return
+
+
+
+touch()
+count = 0
+should_touch = 20 * 60 # once per minute
+
 a.stick_power(-0.25)
 #a.set_power(1)
 
@@ -873,6 +884,11 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
     inst.update(a)
 
   #was draw
+  count += count
+  count %= should_touch
+  if (count == 0):
+    touch()
+
 
 #inputs.release()
 DISPLAY.destroy()

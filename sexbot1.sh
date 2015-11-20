@@ -13,12 +13,23 @@ sleep 20
 while true
     do
 
-        touch /tmp/sexbot1
+        #touch /tmp/sexbot1
 
-        sleep 10
+        sleep 5
+
+        git pull
+        sleep 5
 
         echo "starting script"
-        /usr/bin/python3 DogFight.py
+        /usr/bin/python3 DogFight.py &
+        pid=$!
+
+        keepAlive.sh $pid &
+        alive_pid=$!
+
+        wait $pid
+        kill $alive_pid
+
 
         sleep 1
 
