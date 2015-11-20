@@ -24,7 +24,7 @@ while true
         /usr/bin/python3 DogFight.py &
         pid=$!
 
-        keepAlive.sh $pid &
+        ./keepAlive.sh $pid &
         alive_pid=$!
 
         wait $pid
