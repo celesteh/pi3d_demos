@@ -13,7 +13,7 @@ sleep 20
 while true
     do
 
-        #touch /tmp/sexbot1
+        touch /tmp/sexbot1
 
         sleep 5
 

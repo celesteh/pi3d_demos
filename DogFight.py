@@ -36,6 +36,7 @@ W, H, P = 640, 360, 3 # video width, height, bytes per pixel (3 = RGB)
 
 flag = False # use to signal new texture
 
+print('starting')
 
 class VidPlayer(object):
   def __init__(self):
@@ -113,10 +114,11 @@ class VidPlayer(object):
       self.tex.update_ndarray(self.image)
       return(self.tex)
 
+print ('def vidplayer')
 vplayer =VidPlayer()
 while vplayer.ready() is False:
   time.sleep(1.0)
-
+print('got vidplayer')
 
 arousal = 0
 ejaculation=0
@@ -128,6 +130,7 @@ PAUSE = 1
 
 #display, camera, shader
 #DISPLAY = pi3d.Display.create(x=100, y=100, frames_per_second=20)
+#
 DISPLAY = pi3d.Display.create(frames_per_second=20)
 #a default camera is created automatically but we might need a 2nd 2D camera
 #for displaying the instruments etc. Also, because the landscape is large
@@ -367,6 +370,13 @@ class Aeroplane(object):
       self.v_speed = 0
       self.pitch = 2.5
       #self.roll = 0
+
+    # les hack
+    #print(self.y)
+    if self.y > 2400:
+      #print('peak')
+      self.y=2400
+    #  
     self.z += (self.h_speed * math.cos(math.radians(self.direction)) * dt -
               self.z_perr * P_FACTOR - self.z_ierr * I_FACTOR)
 
@@ -684,6 +694,7 @@ last_moan = 0
 
 
 def touch ():
+    #print ('touch')
     if not os.path.exists('/tmp/sexbot1'):
         open('/tmp/sexbot1', 'a').close() 
     return
@@ -700,7 +711,7 @@ a.stick_power(-0.25)
 CAMERA.position((0.0, 0.0, -10.0))
 cam_rot, cam_pitch = 0, 0
 cam_toggle = True #control mode
-while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
+while DISPLAY.loop_running(): #and not inputs.key_state("KEY_ESC"):
   """ mouse/keyboard input
   #inputs.do_input_events()
   mx, my, mv, mh, md = inputs.get_mouse_movement()
@@ -747,7 +758,7 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
         vplayer.set_mood(1)
       #print (pause)
       if (not sfx.get_busy()) and (time.time() - last_moan > pause):
-        #print (arousal, 'moan')
+        print (arousal, 'moan', sfxFiles[iSFX])
         sfx.play(moan)
         #get ready for the next one
         moan=pygame.mixer.Sound(sfxFiles[iSFX])
@@ -885,7 +896,7 @@ while DISPLAY.loop_running() :# and not inputs.key_state("KEY_ESC"):
     inst.update(a)
 
   #was draw
-  count += count
+  count = count + 1
   count %= should_touch
   if (count == 0):
     touch()

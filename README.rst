@@ -1,6 +1,8 @@
 pi3d_demos
 ==========
 
+Requires: ffmpeg, urllib, pi3d
+
 Demos and support files for pi3d (3D graphics python package for the
 raspberry pi)
 
