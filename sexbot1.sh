@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Set audio for HDMI
+amixer cset numid=3 2
+amixer set PCM 87%
+
 # get the dir of this script
 pushd `dirname $0` > /dev/null
 program_dir=`pwd`

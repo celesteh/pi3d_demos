@@ -13,8 +13,8 @@ while true
 
         if [ ! -f $alive ]; then
             echo "File not found! - Talk.py has not checked in and must be hung"
-            kill $1
-            exit 0
+            kill -9 $1
+            #exit 0
         else
 
             rm $alive

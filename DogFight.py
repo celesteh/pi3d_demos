@@ -128,10 +128,11 @@ NEAR = ORGASMIC_THRESH * 0.9
 REPOSE = -500
 PAUSE = 1
 
+#pygame.init()
 #display, camera, shader
-#DISPLAY = pi3d.Display.create(x=100, y=100, frames_per_second=20)
+DISPLAY = pi3d.Display.create(x=100, y=100, frames_per_second=20,use_pygame=True)
 #
-DISPLAY = pi3d.Display.create(frames_per_second=20)
+#DISPLAY = pi3d.Display.create(frames_per_second=20,use_pygame=True)
 #a default camera is created automatically but we might need a 2nd 2D camera
 #for displaying the instruments etc. Also, because the landscape is large
 #we need to set the far plane to 10,000
@@ -694,7 +695,7 @@ last_moan = 0
 
 
 def touch ():
-    #print ('touch')
+    print ('touch')
     if not os.path.exists('/tmp/sexbot1'):
         open('/tmp/sexbot1', 'a').close() 
     return
@@ -711,6 +712,7 @@ a.stick_power(-0.25)
 CAMERA.position((0.0, 0.0, -10.0))
 cam_rot, cam_pitch = 0, 0
 cam_toggle = True #control mode
+#DISPLAY.resize()
 while DISPLAY.loop_running(): #and not inputs.key_state("KEY_ESC"):
   """ mouse/keyboard input
   #inputs.do_input_events()
